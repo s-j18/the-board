@@ -17,6 +17,9 @@ jobs:
 
       - run: npm install
 
+      - name: Write PartyKit config
+        run: |
+          mkdir -p ~/.partykit
+          echo '{"login":"s-j18","access_token":"${{ secrets.PARTYKIT_API_KEY }}","type":"clerk","username":"s-j18","team":"s-j18"}' > ~/.partykit/config.json
+
       - run: npx partykit deploy
-        env:
-          PARTYKIT_TOKEN: ${{ secrets.PARTYKIT_API_KEY }}
