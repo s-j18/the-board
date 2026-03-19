@@ -1,42 +1,50 @@
 .grid {
   display: grid;
-  gap: 6px;
+  gap: 4px;
   width: 100%;
+  /* Allow the grid to fill available space on mobile */
+  touch-action: manipulation;
 }
 
 .tile {
   aspect-ratio: 1;
   background: var(--surface);
   border: 2px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: 6px;
   color: var(--text);
   cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 4px;
+  gap: 2px;
+  padding: 2px;
   transition: border-color 0.12s, background 0.12s;
   min-height: 0;
+  /* Prevent text selection on repeated taps */
+  user-select: none;
+  -webkit-user-select: none;
+  /* Ensure touch targets are big enough */
+  min-width: 44px;
+  min-height: 44px;
 }
 
-.tile:hover {
-  border-color: rgba(255,255,255,0.25);
-  background: var(--surface2);
+.tile:active {
+  transform: scale(0.95);
 }
 
-.tileType {
-  font-size: clamp(14px, 2.5vw, 22px);
+.tileIcon {
+  font-size: clamp(12px, 3vw, 22px);
   line-height: 1;
 }
 
 .tileLabel {
-  font-size: clamp(8px, 1.2vw, 11px);
+  font-size: clamp(7px, 1.4vw, 11px);
   text-align: center;
   color: var(--muted);
   line-height: 1.2;
   word-break: break-word;
+  hyphens: auto;
 }
 
 /* Selected */
@@ -44,10 +52,7 @@
   border-color: var(--selected-border) !important;
   background: var(--selected) !important;
 }
-
-.selected .tileLabel {
-  color: var(--text);
-}
+.selected .tileLabel { color: var(--text); }
 
 /* Owner colours */
 .p1 { background: var(--p1-light); border-color: var(--p1); }
@@ -62,8 +67,14 @@
 .p4 { background: var(--p4-light); border-color: var(--p4); }
 .p4 .tileLabel { color: #fcd34d; }
 
-/* Selected + owned */
 .p1.selected { border-color: #93c5fd; }
 .p2.selected { border-color: #fca5a5; }
 .p3.selected { border-color: #86efac; }
 .p4.selected { border-color: #fcd34d; }
+
+/* Locked tile — not interactive */
+.locked {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.locked:active { transform: none; }

@@ -2,13 +2,25 @@
 import { useEffect, useRef, useState, useCallback } from "react"
 import { useParams, useSearchParams } from "next/navigation"
 import PartySocket from "partysocket"
-import { GameState, ServerMessage } from "@/lib/types"
+import { GameState, ServerMessage, BoardFilters } from "@/lib/types"
 import { Board } from "@/app/components/Board"
 import { PlayerInput } from "@/app/components/PlayerInput"
 import { Scoreboard } from "@/app/components/Scoreboard"
 import { Lobby } from "@/app/components/Lobby"
 import { GameOver } from "@/app/components/GameOver"
 import styles from "./room.module.css"
+
+// Generate or retrieve a persistent session ID so reconnects work
+function getSessionId(): string {
+  if (typeof window === "undefined") return ""
+  const key = "the-board-session"
+  let id = localStorage.getItem(key)
+  if (!id) {
+    id = Math.random().toString(36).slice(2) + Date.now().toString(36)
+    localStorage.setItem(key, id)
+  }
+  return id
+}
 
 export default function RoomPage() {
   const params = useParams()
@@ -20,20 +32,19 @@ export default function RoomPage() {
   const [gameState, setGameState] = useState<GameState | null>(null)
   const [selectedTiles, setSelectedTiles] = useState<number[]>([])
   const [message, setMessage] = useState<{ text: string; kind: "info" | "success" | "error" | "steal" }>({
-    text: "Connecting…",
-    kind: "info",
+    text: "Connecting…", kind: "info",
   })
   const [myId, setMyId] = useState<string>("")
 
-  // Connect to PartyKit room
   useEffect(() => {
+    const sessionId = getSessionId()
     const host = process.env.NEXT_PUBLIC_PARTYKIT_HOST ?? "localhost:1999"
     const socket = new PartySocket({ host, room: roomId })
     socketRef.current = socket
 
     socket.addEventListener("open", () => {
       setMyId(socket.id)
-      socket.send(JSON.stringify({ type: "join", playerName }))
+      socket.send(JSON.stringify({ type: "join", playerName, sessionId }))
       setMessage({ text: "Connected — waiting for players…", kind: "info" })
     })
 
@@ -42,12 +53,15 @@ export default function RoomPage() {
       if (msg.type === "state") {
         setGameState(msg.state)
         if (msg.state.phase === "playing") {
-          setMessage({ text: "Game started!", kind: "success" })
+          setMessage({ text: "Select tiles then enter a player.", kind: "info" })
         }
       } else if (msg.type === "error") {
         setMessage({ text: msg.message, kind: "error" })
       } else if (msg.type === "claimResult") {
-        setMessage({ text: msg.message, kind: msg.success ? (msg.message.includes("Stole") ? "steal" : "success") : "error" })
+        const kind = msg.success
+          ? msg.message.includes("Stole") ? "steal" : "success"
+          : "error"
+        setMessage({ text: msg.message, kind })
         if (msg.success) setSelectedTiles([])
       }
     })
@@ -69,12 +83,12 @@ export default function RoomPage() {
     )
   }
 
-  function handleClaim(playerNameGuess: string) {
+  function handleClaim(guess: string) {
     if (selectedTiles.length === 0) {
       setMessage({ text: "Select tiles on the board first.", kind: "error" })
       return
     }
-    send({ type: "claim", tileIds: selectedTiles, playerName: playerNameGuess })
+    send({ type: "claim", tileIds: selectedTiles, playerName: guess })
   }
 
   function handlePass() {
@@ -82,8 +96,12 @@ export default function RoomPage() {
     setSelectedTiles([])
   }
 
-  function handleStart(cols: number, rows: number) {
-    send({ type: "start", cols, rows })
+  function handleStart(cols: number, rows: number, filters: BoardFilters) {
+    send({ type: "start", cols, rows, filters })
+  }
+
+  function handleKick(playerId: string) {
+    send({ type: "kick", playerId })
   }
 
   if (!gameState) {
@@ -96,17 +114,20 @@ export default function RoomPage() {
 
   const me = gameState.players.find(p => p.id === myId)
   const isMyTurn = gameState.currentTurn === myId
+  const isLockedOut = me?.lockedOut ?? false
+  const isHost = gameState.players[0]?.id === myId
   const currentPlayer = gameState.players.find(p => p.id === gameState.currentTurn)
+  const canInteract = isMyTurn && !isLockedOut
 
   return (
     <div className={styles.layout}>
       <header className={styles.header}>
         <div className={styles.roomCode}>
-          Room <span>{roomId}</span>
+          <span className={styles.roomLabel}>Room</span>
+          <span className={styles.roomId}>{roomId}</span>
           <button
             className={styles.copyBtn}
             onClick={() => navigator.clipboard.writeText(`${window.location.origin}/room/${roomId}`)}
-            title="Copy invite link"
           >
             Copy link
           </button>
@@ -119,37 +140,49 @@ export default function RoomPage() {
           <Lobby
             players={gameState.players}
             roomId={roomId}
-            isHost={gameState.players[0]?.id === myId}
+            isHost={isHost}
+            myId={myId}
             onStart={handleStart}
+            onKick={handleKick}
           />
         )}
 
         {gameState.phase === "playing" && (
           <>
-            <div className={styles.turnBanner}>
-              {isMyTurn
-                ? "Your turn"
-                : `${currentPlayer?.name ?? "…"}'s turn`}
+            <div className={`${styles.turnBanner} ${isMyTurn ? styles.myTurn : ""}`}>
+              {isLockedOut
+                ? "Wrong answer — wait for next turn"
+                : isMyTurn
+                  ? "Your turn"
+                  : `${currentPlayer?.name ?? "…"}'s turn`}
             </div>
 
             <Board
               board={gameState.board}
               owners={gameState.owners}
               selectedTiles={selectedTiles}
-              onTileClick={isMyTurn ? handleTileClick : () => {}}
-              playerCount={gameState.players.length}
+              onTileClick={canInteract ? handleTileClick : () => {}}
+              locked={!canInteract}
             />
 
             <div className={styles.messageBar} data-kind={message.kind}>
               {message.text}
             </div>
 
-            {isMyTurn && (
+            {canInteract && (
               <PlayerInput
                 onClaim={handleClaim}
                 onPass={handlePass}
                 selectedCount={selectedTiles.length}
               />
+            )}
+
+            {!canInteract && gameState.phase === "playing" && (
+              <div className={styles.watchingBanner}>
+                {isLockedOut
+                  ? `Locked out — ${currentPlayer?.name ?? "next player"} is now playing`
+                  : `Watching ${currentPlayer?.name ?? "…"} play`}
+              </div>
             )}
           </>
         )}
