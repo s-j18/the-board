@@ -1,0 +1,32 @@
+{
+  "name": "the-board",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"next dev\" \"partykit dev\"",
+    "build": "next build",
+    "start": "next start",
+    "partykit:dev": "partykit dev",
+    "partykit:deploy": "partykit deploy",
+    "seed": "npx ts-node --project tsconfig.scripts.json scripts/seed-players.ts"
+  },
+  "dependencies": {
+    "next": "14.2.3",
+    "react": "^18",
+    "react-dom": "^18",
+    "partysocket": "^1.0.2",
+    "@upstash/redis": "^1.31.3",
+    "clsx": "^2.1.1",
+    "fuse.js": "^7.0.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "concurrently": "^8.2.2",
+    "partykit": "^0.0.107",
+    "ts-node": "^10.9.2",
+    "typescript": "^5"
+  }
+}

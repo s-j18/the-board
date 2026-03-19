@@ -1,0 +1,69 @@
+.grid {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+}
+
+.tile {
+  aspect-ratio: 1;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px;
+  transition: border-color 0.12s, background 0.12s;
+  min-height: 0;
+}
+
+.tile:hover {
+  border-color: rgba(255,255,255,0.25);
+  background: var(--surface2);
+}
+
+.tileType {
+  font-size: clamp(14px, 2.5vw, 22px);
+  line-height: 1;
+}
+
+.tileLabel {
+  font-size: clamp(8px, 1.2vw, 11px);
+  text-align: center;
+  color: var(--muted);
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+/* Selected */
+.selected {
+  border-color: var(--selected-border) !important;
+  background: var(--selected) !important;
+}
+
+.selected .tileLabel {
+  color: var(--text);
+}
+
+/* Owner colours */
+.p1 { background: var(--p1-light); border-color: var(--p1); }
+.p1 .tileLabel { color: #93c5fd; }
+
+.p2 { background: var(--p2-light); border-color: var(--p2); }
+.p2 .tileLabel { color: #fca5a5; }
+
+.p3 { background: var(--p3-light); border-color: var(--p3); }
+.p3 .tileLabel { color: #86efac; }
+
+.p4 { background: var(--p4-light); border-color: var(--p4); }
+.p4 .tileLabel { color: #fcd34d; }
+
+/* Selected + owned */
+.p1.selected { border-color: #93c5fd; }
+.p2.selected { border-color: #fca5a5; }
+.p3.selected { border-color: #86efac; }
+.p4.selected { border-color: #fcd34d; }

@@ -1,0 +1,40 @@
+.wrap {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.player {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.35rem 0.75rem;
+  font-size: 0.85rem;
+  transition: border-color 0.15s;
+}
+
+.name { color: var(--muted); }
+.score { font-weight: 700; font-size: 1rem; }
+
+/* Player colours */
+.p1 { border-color: var(--p1); }
+.p1 .score { color: var(--p1); }
+
+.p2 { border-color: var(--p2); }
+.p2 .score { color: var(--p2); }
+
+.p3 { border-color: var(--p3); }
+.p3 .score { color: var(--p3); }
+
+.p4 { border-color: var(--p4); }
+.p4 .score { color: var(--p4); }
+
+/* Active turn */
+.active { background: var(--surface); }
+.active .name { color: var(--text); font-weight: 500; }
+
+/* Disconnected */
+.disconnected { opacity: 0.45; }
