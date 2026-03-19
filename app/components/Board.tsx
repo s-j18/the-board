@@ -35,7 +35,7 @@ export function Board({ board, owners, selectedTiles, onTileClick, playerCount }
             title={tile.label}
           >
             <span className={styles.tileType}>
-              {tile.type === "nation" ? "🌍" : tile.type === "competition" ? "🏆" : "⚽"}
+              {tile.type === "nation" ? "🌍" : "⚽"}
             </span>
             <span className={styles.tileLabel}>{tile.label}</span>
           </button>
