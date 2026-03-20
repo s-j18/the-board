@@ -3,7 +3,7 @@ import { ClientMessage, GameState, GamePlayer, ServerMessage, TileOwner, BoardFi
 import { generateBoard, DEFAULT_FILTERS } from "../lib/board"
 import { validateClaim, applyClaim, isGameOver, nextTurn, applyWrongAnswer } from "../lib/game"
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://the-board-murex.vercel.app"
+const APP_URL = process.env.APP_URL ?? "https://the-board-murex.vercel.app"
 
 const sessionMap = new Map<string, string>()
 
