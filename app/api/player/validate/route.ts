@@ -22,6 +22,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Single search call — returns id AND nationalities
     const results = await searchTransfermarkt(normalise(playerName))
 
     if (!results.length) {
@@ -31,7 +32,10 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const player = await getPlayerCareer(results[0].id)
+    const topResult = results[0]
+
+    // Pass search result into getPlayerCareer — no profile call needed
+    const player = await getPlayerCareer(topResult.id, topResult)
 
     if (!player) {
       return NextResponse.json(
@@ -40,6 +44,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Check each selected tile
     const tiles = board.tiles
     const failedTiles: string[] = []
 

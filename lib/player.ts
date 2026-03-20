@@ -1,7 +1,6 @@
 import Fuse from "fuse.js"
 import { Player } from "./types"
 
-// ── Text normalisation ────────────────────────────────────────────────────────
 export function normalise(str: string): string {
   return str
     .normalize("NFD")
@@ -11,12 +10,12 @@ export function normalise(str: string): string {
     .trim()
 }
 
-// ── Transfermarkt API client ──────────────────────────────────────────────────
 const TM_BASE = process.env.TRANSFERMARKT_API_URL ?? "https://transfermarkt-api.fly.dev"
 
 interface TmSearchResult {
   id: string
   name: string
+  nationalities?: string[]
   club?: { id: string; name: string }
   age?: string
 }
@@ -27,14 +26,6 @@ interface TmTransfer {
   date?: string
 }
 
-interface TmProfile {
-  id: string
-  name: string
-  nationality: string[]
-  club?: { id: string; name: string }
-}
-
-// Search Transfermarkt for players matching a query
 export async function searchTransfermarkt(query: string): Promise<TmSearchResult[]> {
   try {
     const res = await fetch(
@@ -49,59 +40,55 @@ export async function searchTransfermarkt(query: string): Promise<TmSearchResult
   }
 }
 
-// Get a player's full career from Transfermarkt, returning club IDs and name tags
-export async function getPlayerCareer(tmId: string): Promise<Player | null> {
+export async function getPlayerCareer(tmId: string, searchResult: TmSearchResult): Promise<Player | null> {
   try {
-    const [profileRes, transfersRes] = await Promise.all([
-      fetch(`${TM_BASE}/players/${tmId}/profile`, { next: { revalidate: 86400 } }),
-      fetch(`${TM_BASE}/players/${tmId}/transfers`, { next: { revalidate: 86400 } }),
-    ])
+    // Only one API call needed — transfers gives us all clubs
+    const transfersRes = await fetch(
+      `${TM_BASE}/players/${tmId}/transfers`,
+      { next: { revalidate: 86400 } }
+    )
 
-    if (!profileRes.ok) return null
-
-    const profile: TmProfile = await profileRes.json()
     const transfers: { transfers?: TmTransfer[] } = transfersRes.ok
       ? await transfersRes.json()
       : {}
 
-    // ── Collect all club IDs from career ──────────────────────────────────────
-    // We use IDs (not names) so "Derby" and "Derby County" always match correctly
+    // Collect all club IDs from transfer history
     const clubIds = new Set<string>()
     const clubNameTags = new Set<string>()
 
-    // Current club from profile
-    if (profile.club?.id) {
-      clubIds.add(profile.club.id)
-      clubNameTags.add(normalise(profile.club.name))
+    // Add current club from search result if available
+    if (searchResult.club?.id && searchResult.club.name !== "Retired" && searchResult.club.name !== "Without Club") {
+      clubIds.add(searchResult.club.id)
+      clubNameTags.add(normalise(searchResult.club.name))
     }
 
-    // All clubs from transfer history
+    // Add all clubs from transfer history (both clubFrom and clubTo)
     for (const t of transfers.transfers ?? []) {
       const clubs = [t.clubFrom, t.clubTo]
       for (const club of clubs) {
         if (!club) continue
-        const name = club.name
-        if (name && name !== "Without Club" && name !== "Retired" && name !== "Career break") {
+        if (club.name && club.name !== "Without Club" && club.name !== "Retired" && club.name !== "Career break") {
           clubIds.add(club.id)
-          clubNameTags.add(normalise(name))
+          clubNameTags.add(normalise(club.name))
         }
       }
     }
 
-    // ── Nationality tags ──────────────────────────────────────────────────────
-    const nationTags = profile.nationality.map(n => normalise(n))
-    // Common aliases
+    // Get nationality from search result — no profile call needed
+    const nationTags = (searchResult.nationalities ?? []).map(n => normalise(n))
     if (nationTags.includes("republic of ireland")) nationTags.push("ireland")
     if (nationTags.includes("netherlands")) nationTags.push("holland")
     if (nationTags.includes("czech republic")) nationTags.push("czechia")
     if (nationTags.includes("ivory coast")) nationTags.push("cote d'ivoire")
 
+    const tags = [...clubNameTags, ...nationTags]
+
     return {
       id: tmId,
-      name: profile.name,
-      searchName: normalise(profile.name),
+      name: searchResult.name,
+      searchName: normalise(searchResult.name),
       clubIds: [...clubIds],
-      tags: [...clubNameTags, ...nationTags],
+      tags,
       nationality: nationTags,
     }
   } catch {
@@ -109,7 +96,6 @@ export async function getPlayerCareer(tmId: string): Promise<Player | null> {
   }
 }
 
-// ── Fuse.js fuzzy search ──────────────────────────────────────────────────────
 let fuseInstance: Fuse<{ name: string }> | null = null
 
 export function buildFuseIndex(players: { name: string }[]): void {
