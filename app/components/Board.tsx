@@ -9,10 +9,10 @@ interface Props {
   owners: TileOwner[]
   selectedTiles: number[]
   onTileClick: (id: number) => void
-  playerCount: number
+  locked: boolean
 }
 
-export function Board({ board, owners, selectedTiles, onTileClick, playerCount }: Props) {
+export function Board({ board, owners, selectedTiles, onTileClick, locked }: Props) {
   return (
     <div
       className={styles.grid}
@@ -30,11 +30,13 @@ export function Board({ board, owners, selectedTiles, onTileClick, playerCount }
               styles.tile,
               ownerColor && styles[ownerColor],
               selected && styles.selected,
+              locked && styles.locked,
             )}
             onClick={() => onTileClick(tile.id)}
             title={tile.label}
+            disabled={locked}
           >
-            <span className={styles.tileType}>
+            <span className={styles.tileIcon}>
               {tile.type === "nation" ? "🌍" : "⚽"}
             </span>
             <span className={styles.tileLabel}>{tile.label}</span>
