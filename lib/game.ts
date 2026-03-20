@@ -136,13 +136,10 @@ export function nextTurn(state: GameState): string {
 
 // ── Lock out current player and advance turn ──────────────────────────────────
 export function applyWrongAnswer(state: GameState): GameState {
+  // Lock out the current player
   const newPlayers = state.players.map(p =>
-    p.id === state.currentTurn ? { ...p, lockedOut: true } : p
+    p.id === state.currentTurn ? { ...p, lockedOut: true } : { ...p, lockedOut: false }
   )
   const next = nextTurn({ ...state, players: newPlayers })
-  // Unlock the player who was locked out when it comes back around
-  const unlockedPlayers = newPlayers.map(p =>
-    p.id !== state.currentTurn ? { ...p, lockedOut: false } : p
-  )
-  return { ...state, players: unlockedPlayers, currentTurn: next }
+  return { ...state, players: newPlayers, currentTurn: next }
 }

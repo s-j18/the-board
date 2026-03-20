@@ -2,11 +2,9 @@ import type * as Party from "partykit/server"
 import { ClientMessage, GameState, GamePlayer, ServerMessage, TileOwner, BoardFilters } from "../lib/types"
 import { generateBoard, DEFAULT_FILTERS } from "../lib/board"
 import { validateClaim, applyClaim, isGameOver, nextTurn, applyWrongAnswer } from "../lib/game"
-import { getPlayerCareer, normalise } from "../lib/player"
 
-const TM_BASE = process.env.TRANSFERMARKT_API_URL ?? "https://transfermarkt-api.fly.dev"
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://the-board-murex.vercel.app"
 
-// Maps sessionId → connection id, so players can reconnect
 const sessionMap = new Map<string, string>()
 
 export default class BoardServer implements Party.Server {
@@ -52,7 +50,6 @@ export default class BoardServer implements Party.Server {
     }
   }
 
-  // ── Join / reconnect ──────────────────────────────────────────────────────
   async handleJoin(conn: Party.Connection, playerName: string, sessionId: string) {
     if (!this.state) {
       this.state = {
@@ -66,14 +63,12 @@ export default class BoardServer implements Party.Server {
       }
     }
 
-    // Check if this sessionId belongs to an existing player (reconnect)
     const existingConnId = sessionMap.get(sessionId)
     const existingPlayer = existingConnId
       ? this.state.players.find(p => p.id === existingConnId)
       : null
 
     if (existingPlayer) {
-      // Reconnect: update their connection id and mark connected
       sessionMap.set(sessionId, conn.id)
       this.state = {
         ...this.state,
@@ -88,7 +83,6 @@ export default class BoardServer implements Party.Server {
       return
     }
 
-    // New player joining lobby
     if (this.state.phase !== "lobby") {
       this.send(conn, { type: "error", message: "Game already in progress." })
       return
@@ -119,7 +113,6 @@ export default class BoardServer implements Party.Server {
     this.broadcast({ type: "state", state: this.state })
   }
 
-  // ── Start game ────────────────────────────────────────────────────────────
   async handleStart(conn: Party.Connection, cols: number, rows: number, filters: BoardFilters) {
     if (!this.state) return
     if (this.state.phase !== "lobby") {
@@ -154,7 +147,6 @@ export default class BoardServer implements Party.Server {
     this.broadcast({ type: "state", state: this.state })
   }
 
-  // ── Claim tiles ───────────────────────────────────────────────────────────
   async handleClaim(conn: Party.Connection, tileIds: number[], playerName: string) {
     if (!this.state || this.state.phase !== "playing") return
 
@@ -166,43 +158,63 @@ export default class BoardServer implements Party.Server {
     const gamePlayer = this.state.players.find(p => p.id === conn.id)
     if (!gamePlayer) return
 
-    // Fetch player from Transfermarkt
-    let tmPlayer = null
+    let validationResult: {
+      valid: boolean
+      message: string
+      playerName?: string
+      clubIds?: string[]
+      tags?: string[]
+    }
+
     try {
-      const searchRes = await fetch(
-        `${TM_BASE}/players/search/${encodeURIComponent(normalise(playerName))}`
-      )
-      if (searchRes.ok) {
-        const data = await searchRes.json()
-        const results = data.results ?? []
-        if (results.length > 0) {
-          tmPlayer = await getPlayerCareer(results[0].id)
-        }
-      }
+      const res = await fetch(`${APP_URL}/api/player/validate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          playerName,
+          tileIds,
+          board: this.state.board,
+        }),
+      })
+      validationResult = await res.json()
     } catch {
-      this.send(conn, { type: "error", message: "Could not reach player database. Try again." })
+      this.send(conn, { type: "error", message: "Could not reach validation server. Try again." })
       return
     }
 
-    if (!tmPlayer) {
-      // Wrong answer — lock out and advance turn
+    if (!validationResult.valid) {
       this.state = applyWrongAnswer(this.state)
-      this.broadcast({ type: "claimResult", success: false, message: `"${playerName}" not found — turn skipped.` })
+      this.broadcast({
+        type: "claimResult",
+        success: false,
+        message: `${validationResult.message} Turn skipped.`,
+      })
       this.broadcast({ type: "state", state: this.state })
       return
+    }
+
+    const tmPlayer = {
+      id: "",
+      name: validationResult.playerName ?? playerName,
+      searchName: "",
+      clubIds: validationResult.clubIds ?? [],
+      tags: validationResult.tags ?? [],
+      nationality: [],
     }
 
     const result = validateClaim(tileIds, tmPlayer, gamePlayer.playerIndex, this.state)
 
     if (!result.valid) {
-      // Wrong answer — lock out and advance turn
       this.state = applyWrongAnswer(this.state)
-      this.broadcast({ type: "claimResult", success: false, message: `${result.message} Turn skipped.` })
+      this.broadcast({
+        type: "claimResult",
+        success: false,
+        message: `${result.message} Turn skipped.`,
+      })
       this.broadcast({ type: "state", state: this.state })
       return
     }
 
-    // Valid claim
     this.state = applyClaim(tileIds, gamePlayer.playerIndex, result, this.state)
 
     let message = `${tmPlayer.name} claimed ${result.blankClaimed.length} tile(s)!`
@@ -220,7 +232,6 @@ export default class BoardServer implements Party.Server {
     this.broadcast({ type: "state", state: this.state })
   }
 
-  // ── Pass ──────────────────────────────────────────────────────────────────
   handlePass(conn: Party.Connection) {
     if (!this.state || this.state.phase !== "playing") return
     if (this.state.currentTurn !== conn.id) return
@@ -238,7 +249,6 @@ export default class BoardServer implements Party.Server {
     this.broadcast({ type: "state", state: this.state })
   }
 
-  // ── Kick player (host only) ───────────────────────────────────────────────
   handleKick(conn: Party.Connection, playerId: string) {
     if (!this.state) return
     if (this.state.players[0]?.id !== conn.id) {
@@ -251,7 +261,6 @@ export default class BoardServer implements Party.Server {
       players: this.state.players.filter(p => p.id !== playerId),
     }
 
-    // If it was that player's turn, advance
     if (this.state.currentTurn === playerId) {
       this.state = { ...this.state, currentTurn: nextTurn(this.state) }
     }
