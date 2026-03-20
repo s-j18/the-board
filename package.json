@@ -11,13 +11,14 @@
     "seed": "npx ts-node --project tsconfig.scripts.json scripts/seed-players.ts"
   },
   "dependencies": {
-    "next": "14.2.3",
-    "react": "^18",
-    "react-dom": "^18",
-    "partysocket": "^1.0.2",
     "@upstash/redis": "^1.31.3",
     "clsx": "^2.1.1",
+    "flag-icons": "^7.5.0",
     "fuse.js": "^7.0.0",
+    "next": "14.2.3",
+    "partysocket": "^1.0.2",
+    "react": "^18",
+    "react-dom": "^18",
     "zod": "^3.23.8"
   },
   "devDependencies": {

@@ -132,3 +132,17 @@
   transition: color 0.15s;
 }
 .passBtn:hover { color: var(--text); }
+
+.inputLocked {
+  border-color: var(--p3) !important;
+}
+
+.lockedIndicator {
+  position: absolute;
+  right: 0.875rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--p3);
+  font-size: 0.9rem;
+  pointer-events: none;
+}

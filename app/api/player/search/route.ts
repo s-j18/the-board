@@ -4,6 +4,7 @@ import { normalise } from "@/lib/player"
 const TM_BASE = process.env.TRANSFERMARKT_API_URL ?? "https://transfermarkt-api.fly.dev"
 
 export interface PlayerSearchResult {
+  id: string
   name: string
   nationality: string | null
   flagEmoji: string | null
@@ -53,9 +54,10 @@ export async function GET(req: NextRequest) {
     const data = await res.json()
     const results: PlayerSearchResult[] = (data.results ?? [])
       .slice(0, 8)
-      .map((r: { name: string; nationality?: string; position?: string }) => {
+      .map((r: { id: string; name: string; nationality?: string; position?: string }) => {
         const nationality = r.nationality ?? null
         return {
+          id: r.id,
           name: r.name,
           nationality,
           flagEmoji: nationality ? (FLAG_MAP[nationality] ?? null) : null,

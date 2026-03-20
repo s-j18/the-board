@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getPlayerCareer, searchTransfermarkt, normalise } from "@/lib/player"
+import { getPlayerCareer, getPlayerById, searchTransfermarkt, normalise } from "@/lib/player"
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -13,7 +13,7 @@ export async function OPTIONS() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { playerName, tileIds, board } = await req.json()
+    const { playerName, playerId, tileIds, board } = await req.json()
 
     if (!playerName || !tileIds || !board) {
       return NextResponse.json(
@@ -29,20 +29,26 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Single search call — returns id AND nationalities
-    const results = await searchTransfermarkt(playerName)
+    let player = null
 
-    if (!results.length) {
-      return NextResponse.json(
-        { valid: false, message: `"${playerName}" not found.` },
-        { headers: CORS_HEADERS }
-      )
+    // If we have a player ID from the autocomplete, use it directly —
+    // this avoids re-searching and picking the wrong player with the same name
+    if (playerId) {
+      player = await getPlayerById(playerId)
     }
 
-    const topResult = results[0]
-
-    // Pass search result into getPlayerCareer — no profile call needed
-    const player = await getPlayerCareer(topResult.id, topResult)
+    // Fallback: no ID supplied (user typed without selecting from dropdown)
+    if (!player) {
+      const results = await searchTransfermarkt(normalise(playerName))
+      if (!results.length) {
+        return NextResponse.json(
+          { valid: false, message: `"${playerName}" not found.` },
+          { headers: CORS_HEADERS }
+        )
+      }
+      const topResult = results[0]
+      player = await getPlayerCareer(topResult.id, topResult)
+    }
 
     if (!player) {
       return NextResponse.json(
@@ -60,16 +66,13 @@ export async function POST(req: NextRequest) {
       if (!tile) continue
 
       let matches = false
-
       if (tile.type === "club" && tile.tmClubId) {
         matches = player.clubIds.includes(tile.tmClubId)
       } else {
         matches = player.tags.some((t: string) => tile.tags.includes(t))
       }
 
-      if (!matches) {
-        failedTiles.push(tile.label)
-      }
+      if (!matches) failedTiles.push(tile.label)
     }
 
     if (failedTiles.length > 0) {

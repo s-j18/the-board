@@ -88,7 +88,7 @@ export default function RoomPage() {
     )
   }
 
-  async function handleClaim(guess: string) {
+  async function handleClaim(guess: string, playerId: string | null) {
     if (selectedTiles.length === 0) {
       setMessage({ text: "Select tiles on the board first.", kind: "error" })
       return
@@ -105,6 +105,7 @@ export default function RoomPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           playerName: guess,
+          playerId,
           tileIds: selectedTiles,
           board: gameState.board,
         }),

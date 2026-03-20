@@ -52,7 +52,7 @@
 
 /* ── Club badge (coloured initials) ────────────────────────────────────────── */
 .clubBadge {
-  font-size: clamp(7px, 1.6vw, 13px);
+  font-size: clamp(9px, 2vw, 15px);
   font-weight: 800;
   letter-spacing: 0.02em;
   color: #fff;
@@ -67,16 +67,19 @@
   text-shadow: 0 1px 2px rgba(0,0,0,0.5);
 }
 
-/* ── Nation flag emoji ──────────────────────────────────────────────────────── */
+/* ── Nation flag ──────────────────────────────────────────────────────────── */
 .tileFlag {
-  font-size: clamp(12px, 3.2vw, 22px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(14px, 3.5vw, 26px);
   line-height: 1;
-  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));
 }
 
-/* ── Label ──────────────────────────────────────────────────────────────────── */
+/* ── Label ────────────────────────────────────────────────────────────────── */
 .tileLabel {
-  font-size: clamp(6px, 1.2vw, 10px);
+  font-size: clamp(8px, 1.6vw, 13px);
+  font-weight: 500;
   text-align: center;
   color: var(--muted);
   line-height: 1.2;

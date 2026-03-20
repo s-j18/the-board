@@ -4,21 +4,6 @@ import clsx from "clsx"
 
 const PLAYER_COLORS = ["", "p1", "p2", "p3", "p4"] as const
 
-// Nation flagCode → emoji flag
-const FLAG_EMOJI: Record<string, string> = {
-  "gb-eng": "🏴󠁧󠁢󠁥󠁮󠁧󠁿", "gb-sct": "🏴󠁧󠁢󠁳󠁣󠁴󠁿", "gb-wls": "🏴󠁧󠁢󠁷󠁬󠁳󠁿",
-  "fr": "🇫🇷", "de": "🇩🇪", "es": "🇪🇸", "it": "🇮🇹", "pt": "🇵🇹",
-  "br": "🇧🇷", "ar": "🇦🇷", "nl": "🇳🇱", "be": "🇧🇪", "hr": "🇭🇷",
-  "uy": "🇺🇾", "co": "🇨🇴", "mx": "🇲🇽", "us": "🇺🇸", "sn": "🇸🇳",
-  "ng": "🇳🇬", "gh": "🇬🇭", "ci": "🇨🇮", "ma": "🇲🇦", "eg": "🇪🇬",
-  "cm": "🇨🇲", "kr": "🇰🇷", "jp": "🇯🇵", "au": "🇦🇺", "dk": "🇩🇰",
-  "se": "🇸🇪", "no": "🇳🇴", "pl": "🇵🇱", "cz": "🇨🇿", "at": "🇦🇹",
-  "ch": "🇨🇭", "rs": "🇷🇸", "ua": "🇺🇦", "tr": "🇹🇷", "gr": "🇬🇷",
-  "hu": "🇭🇺", "ro": "🇷🇴", "ie": "🇮🇪", "is": "🇮🇸", "al": "🇦🇱",
-  "cl": "🇨🇱", "pe": "🇵🇪", "ec": "🇪🇨", "dz": "🇩🇿", "tn": "🇹🇳",
-  "sa": "🇸🇦", "ir": "🇮🇷", "qa": "🇶🇦", "fi": "🇫🇮",
-}
-
 // Club accent colours by Transfermarkt club ID
 const CLUB_ACCENT: Record<string, string> = {
   // Premier League
@@ -80,13 +65,22 @@ const CLUB_ACCENT: Record<string, string> = {
 }
 
 function getClubInitials(label: string): string {
-  // Strip common suffixes and short words for initials
   const skip = new Set(["FC", "SC", "AC", "AS", "CF", "de", "of", "the", "&"])
   const words = label.split(/[\s\-]+/).filter(w => !skip.has(w) && w.length > 0)
   if (words.length === 0) return label.slice(0, 3).toUpperCase()
   if (words.length === 1) return words[0].slice(0, 3).toUpperCase()
-  // 2–3 word names: initials
   return words.slice(0, 3).map(w => w[0]).join("").toUpperCase()
+}
+
+// flag-icons uses "gb-eng" style codes — matches our flagCode exactly
+function FlagIcon({ code }: { code: string }) {
+  // flag-icons expects the region code after "fi-", e.g. fi fi-gb-eng
+  return (
+    <span
+      className={`fi fi-${code}`}
+      style={{ borderRadius: 2, width: "1.4em", height: "1em", display: "inline-block" }}
+    />
+  )
 }
 
 interface Props {
@@ -128,7 +122,9 @@ export function Board({ board, owners, selectedTiles, onTileClick, locked }: Pro
             {tile.type === "nation" ? (
               <>
                 <span className={styles.tileFlag}>
-                  {tile.flagCode ? (FLAG_EMOJI[tile.flagCode] ?? "🌍") : "🌍"}
+                  {tile.flagCode
+                    ? <FlagIcon code={tile.flagCode} />
+                    : "🌍"}
                 </span>
                 <span className={styles.tileLabel}>{tile.label}</span>
               </>
