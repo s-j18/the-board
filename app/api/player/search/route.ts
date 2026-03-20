@@ -6,7 +6,7 @@ const TM_BASE = process.env.TRANSFERMARKT_API_URL ?? "https://transfermarkt-api.
 export interface PlayerSearchResult {
   id: string
   name: string
-  nationality: string | null
+  nationalities: string[]
   flagEmoji: string | null
   position: string | null
 }
@@ -54,8 +54,9 @@ export async function GET(req: NextRequest) {
     const data = await res.json()
     const results: PlayerSearchResult[] = (data.results ?? [])
       .slice(0, 8)
-      .map((r: { id: string; name: string; nationality?: string; position?: string }) => {
-        const nationality = r.nationality ?? null
+      .map((r: { id: string; name: string; nationalities?: string[]; position?: string }) => {
+        // TM API returns 'nationalities' as an array — take the first one
+        const nationality = r.nationalities?.[0] ?? null
         return {
           id: r.id,
           name: r.name,

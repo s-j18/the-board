@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getPlayerCareer, getPlayerById, searchTransfermarkt, normalise } from "@/lib/player"
+import { getPlayerCareer, searchTransfermarkt, normalise } from "@/lib/player"
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -13,7 +13,7 @@ export async function OPTIONS() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { playerName, playerId, tileIds, board } = await req.json()
+    const { playerName, playerId, playerNationalities, tileIds, board } = await req.json()
 
     if (!playerName || !tileIds || !board) {
       return NextResponse.json(
@@ -31,13 +31,18 @@ export async function POST(req: NextRequest) {
 
     let player = null
 
-    // If we have a player ID from the autocomplete, use it directly —
-    // this avoids re-searching and picking the wrong player with the same name
     if (playerId) {
-      player = await getPlayerById(playerId)
+      // We already have id + nationalities from the search result —
+      // just fetch transfers to get club history, no profile call needed
+      const searchResult = {
+        id: playerId,
+        name: playerName,
+        nationalities: playerNationalities ?? [],
+      }
+      player = await getPlayerCareer(playerId, searchResult)
     }
 
-    // Fallback: no ID supplied (user typed without selecting from dropdown)
+    // Fallback: user typed without picking from dropdown — search by name
     if (!player) {
       const results = await searchTransfermarkt(normalise(playerName))
       if (!results.length) {
