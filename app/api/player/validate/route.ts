@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Single search call — returns id AND nationalities
-    const results = await searchTransfermarkt(normalise(playerName))
+    const results = await searchTransfermarkt(playerName)
 
     if (!results.length) {
       return NextResponse.json(
