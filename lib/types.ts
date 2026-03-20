@@ -3,24 +3,24 @@ export interface Tile {
   id: number
   label: string
   type: "club" | "nation"
-  tags: string[]        // normalised name tags for matching
-  tmClubId?: string     // Transfermarkt club ID (backend only, never shown to user)
-  flagCode?: string     // ISO code for nations
+  tags: string[]
+  tmClubId?: string
+  flagCode?: string
 }
 
 // ── Board ─────────────────────────────────────────────────────────────────────
 export type League = "premier_league" | "championship" | "la_liga" | "bundesliga" | "serie_a" | "ligue_1" | "eredivisie" | "other_europe"
 
 export interface BoardFilters {
-  englishWeight: number       // 0–100, percentage of tiles that are English clubs
-  leagues: League[]           // which leagues to include
+  englishWeight: number
+  leagues: League[]
   includeNations: boolean
 }
 
-export interface BoardConfig {
-  cols: number
-  rows: number
-  filters: BoardFilters
+export const DEFAULT_FILTERS: BoardFilters = {
+  englishWeight: 70,
+  leagues: ["premier_league", "championship", "la_liga", "bundesliga", "serie_a", "ligue_1", "other_europe"],
+  includeNations: true,
 }
 
 export interface Board {
@@ -31,16 +31,16 @@ export interface Board {
 
 // ── Player ───────────────────────────────────────────────────────────────────
 export interface Player {
-  id: string            // Transfermarkt player ID
-  name: string          // Display name e.g. "Petr Čech"
-  searchName: string    // Normalised e.g. "petr cech"
-  clubIds: string[]     // Transfermarkt club IDs from career history
-  tags: string[]        // Normalised name tags (fallback matching)
+  id: string
+  name: string
+  searchName: string
+  clubIds: string[]
+  tags: string[]
   nationality: string[]
 }
 
 // ── Game state ────────────────────────────────────────────────────────────────
-export type TileOwner = 0 | 1 | 2 | 3 | 4  // 0 = unclaimed
+export type TileOwner = 0 | 1 | 2 | 3 | 4
 
 export interface GamePlayer {
   id: string
@@ -48,7 +48,7 @@ export interface GamePlayer {
   score: number
   playerIndex: 1 | 2 | 3 | 4
   connected: boolean
-  lockedOut: boolean    // locked out until next turn after wrong answer
+  lockedOut: boolean
 }
 
 export type GamePhase = "lobby" | "playing" | "finished"
@@ -59,7 +59,7 @@ export interface GameState {
   board: Board
   owners: TileOwner[]
   players: GamePlayer[]
-  currentTurn: string   // player id
+  currentTurn: string
   consecutivePasses: number
   lastAction?: string
 }
@@ -68,7 +68,8 @@ export interface GameState {
 export type ClientMessage =
   | { type: "join"; playerName: string; sessionId: string }
   | { type: "start"; cols: number; rows: number; filters: BoardFilters }
-  | { type: "claim"; tileIds: number[]; playerName: string }
+  | { type: "claim_valid"; tileIds: number[]; playerName: string; clubIds: string[]; tags: string[] }
+  | { type: "claim_invalid"; message: string }
   | { type: "pass" }
   | { type: "kick"; playerId: string }
 
@@ -77,9 +78,3 @@ export type ServerMessage =
   | { type: "state"; state: GameState }
   | { type: "error"; message: string }
   | { type: "claimResult"; success: boolean; message: string; newOwners?: TileOwner[] }
-
-export const DEFAULT_FILTERS: BoardFilters = {
-  englishWeight: 70,
-  leagues: ["premier_league", "championship", "la_liga", "bundesliga", "serie_a", "ligue_1", "other_europe"],
-  includeNations: true,
-}

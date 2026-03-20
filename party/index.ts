@@ -3,8 +3,6 @@ import { ClientMessage, GameState, GamePlayer, ServerMessage, TileOwner, BoardFi
 import { generateBoard, DEFAULT_FILTERS } from "../lib/board"
 import { validateClaim, applyClaim, isGameOver, nextTurn, applyWrongAnswer } from "../lib/game"
 
-const APP_URL = process.env.APP_URL ?? "https://the-board-murex.vercel.app"
-
 const sessionMap = new Map<string, string>()
 
 export default class BoardServer implements Party.Server {
@@ -38,15 +36,16 @@ export default class BoardServer implements Party.Server {
   }
 
   async onMessage(raw: string, conn: Party.Connection) {
-    let msg: ClientMessage
+    let msg: any
     try { msg = JSON.parse(raw) } catch { return }
 
     switch (msg.type) {
-      case "join":  await this.handleJoin(conn, msg.playerName, msg.sessionId); break
-      case "start": await this.handleStart(conn, msg.cols, msg.rows, msg.filters); break
-      case "claim": await this.handleClaim(conn, msg.tileIds, msg.playerName); break
-      case "pass":  this.handlePass(conn); break
-      case "kick":  this.handleKick(conn, msg.playerId); break
+      case "join":          await this.handleJoin(conn, msg.playerName, msg.sessionId); break
+      case "start":         await this.handleStart(conn, msg.cols, msg.rows, msg.filters); break
+      case "claim_valid":   this.handleClaimValid(conn, msg.tileIds, msg.playerName, msg.clubIds, msg.tags); break
+      case "claim_invalid": this.handleClaimInvalid(conn, msg.message); break
+      case "pass":          this.handlePass(conn); break
+      case "kick":          this.handleKick(conn, msg.playerId); break
     }
   }
 
@@ -147,77 +146,33 @@ export default class BoardServer implements Party.Server {
     this.broadcast({ type: "state", state: this.state })
   }
 
-  async handleClaim(conn: Party.Connection, tileIds: number[], playerName: string) {
+  // Browser has already validated — just apply the claim
+  handleClaimValid(
+    conn: Party.Connection,
+    tileIds: number[],
+    playerName: string,
+    clubIds: string[],
+    tags: string[]
+  ) {
     if (!this.state || this.state.phase !== "playing") return
-
-    if (this.state.currentTurn !== conn.id) {
-      this.send(conn, { type: "error", message: "It's not your turn." })
-      return
-    }
+    if (this.state.currentTurn !== conn.id) return
 
     const gamePlayer = this.state.players.find(p => p.id === conn.id)
     if (!gamePlayer) return
 
-    let validationResult: {
-      valid: boolean
-      message: string
-      playerName?: string
-      clubIds?: string[]
-      tags?: string[]
-    }
-
-    try {
-      const res = await fetch(`${APP_URL}/api/player/validate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          playerName,
-          tileIds,
-          board: this.state.board,
-        }),
-      })
-      validationResult = await res.json()
-    } catch {
-      this.send(conn, { type: "error", message: "Could not reach validation server. Try again." })
-      return
-    }
-
-    if (!validationResult.valid) {
-      this.state = applyWrongAnswer(this.state)
-      this.broadcast({
-        type: "claimResult",
-        success: false,
-        message: `${validationResult.message} Turn skipped.`,
-      })
-      this.broadcast({ type: "state", state: this.state })
-      return
-    }
-
-    const tmPlayer = {
-      id: "",
-      name: validationResult.playerName ?? playerName,
-      searchName: "",
-      clubIds: validationResult.clubIds ?? [],
-      tags: validationResult.tags ?? [],
-      nationality: [],
-    }
-
+    const tmPlayer = { id: "", name: playerName, searchName: "", clubIds, tags, nationality: [] }
     const result = validateClaim(tileIds, tmPlayer, gamePlayer.playerIndex, this.state)
 
     if (!result.valid) {
       this.state = applyWrongAnswer(this.state)
-      this.broadcast({
-        type: "claimResult",
-        success: false,
-        message: `${result.message} Turn skipped.`,
-      })
+      this.broadcast({ type: "claimResult", success: false, message: `${result.message} Turn skipped.` })
       this.broadcast({ type: "state", state: this.state })
       return
     }
 
     this.state = applyClaim(tileIds, gamePlayer.playerIndex, result, this.state)
 
-    let message = `${tmPlayer.name} claimed ${result.blankClaimed.length} tile(s)!`
+    let message = `${playerName} claimed ${result.blankClaimed.length} tile(s)!`
     if (result.opponentStolen.length > 0) {
       message += ` Stole ${result.opponentStolen.length} from opponent(s)!`
     }
@@ -229,6 +184,16 @@ export default class BoardServer implements Party.Server {
     }
 
     this.broadcast({ type: "claimResult", success: true, message, newOwners: this.state.owners })
+    this.broadcast({ type: "state", state: this.state })
+  }
+
+  // Browser validation failed — advance turn
+  handleClaimInvalid(conn: Party.Connection, message: string) {
+    if (!this.state || this.state.phase !== "playing") return
+    if (this.state.currentTurn !== conn.id) return
+
+    this.state = applyWrongAnswer(this.state)
+    this.broadcast({ type: "claimResult", success: false, message: `${message} Turn skipped.` })
     this.broadcast({ type: "state", state: this.state })
   }
 

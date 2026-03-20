@@ -10,7 +10,6 @@ import { Lobby } from "@/app/components/Lobby"
 import { GameOver } from "@/app/components/GameOver"
 import styles from "./room.module.css"
 
-// Generate or retrieve a persistent session ID so reconnects work
 function getSessionId(): string {
   if (typeof window === "undefined") return ""
   const key = "the-board-session"
@@ -35,6 +34,7 @@ export default function RoomPage() {
     text: "Connecting…", kind: "info",
   })
   const [myId, setMyId] = useState<string>("")
+  const [validating, setValidating] = useState(false)
 
   useEffect(() => {
     const sessionId = getSessionId()
@@ -83,12 +83,52 @@ export default function RoomPage() {
     )
   }
 
-  function handleClaim(guess: string) {
+  async function handleClaim(guess: string) {
     if (selectedTiles.length === 0) {
       setMessage({ text: "Select tiles on the board first.", kind: "error" })
       return
     }
-    send({ type: "claim", tileIds: selectedTiles, playerName: guess })
+    if (!gameState) return
+
+    setValidating(true)
+    setMessage({ text: "Checking player…", kind: "info" })
+
+    try {
+      // Validate in the browser via Vercel API
+      const res = await fetch("/api/player/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          playerName: guess,
+          tileIds: selectedTiles,
+          board: gameState.board,
+        }),
+      })
+
+      const result = await res.json()
+
+      if (!result.valid) {
+        // Tell PartyKit the guess was wrong — it advances the turn
+        send({
+          type: "claim_invalid",
+          message: result.message,
+        })
+        setMessage({ text: result.message, kind: "error" })
+      } else {
+        // Tell PartyKit the guess was valid — send player data so it can apply scoring
+        send({
+          type: "claim_valid",
+          tileIds: selectedTiles,
+          playerName: result.playerName,
+          clubIds: result.clubIds,
+          tags: result.tags,
+        })
+      }
+    } catch {
+      setMessage({ text: "Could not reach server. Try again.", kind: "error" })
+    } finally {
+      setValidating(false)
+    }
   }
 
   function handlePass() {
@@ -117,7 +157,7 @@ export default function RoomPage() {
   const isLockedOut = me?.lockedOut ?? false
   const isHost = gameState.players[0]?.id === myId
   const currentPlayer = gameState.players.find(p => p.id === gameState.currentTurn)
-  const canInteract = isMyTurn && !isLockedOut
+  const canInteract = isMyTurn && !isLockedOut && !validating
 
   return (
     <div className={styles.layout}>
@@ -150,11 +190,13 @@ export default function RoomPage() {
         {gameState.phase === "playing" && (
           <>
             <div className={`${styles.turnBanner} ${isMyTurn ? styles.myTurn : ""}`}>
-              {isLockedOut
-                ? "Wrong answer — wait for next turn"
-                : isMyTurn
-                  ? "Your turn"
-                  : `${currentPlayer?.name ?? "…"}'s turn`}
+              {validating
+                ? "Checking player…"
+                : isLockedOut
+                  ? "Wrong answer — wait for next turn"
+                  : isMyTurn
+                    ? "Your turn"
+                    : `${currentPlayer?.name ?? "…"}'s turn`}
             </div>
 
             <Board
@@ -179,9 +221,11 @@ export default function RoomPage() {
 
             {!canInteract && gameState.phase === "playing" && (
               <div className={styles.watchingBanner}>
-                {isLockedOut
-                  ? `Locked out — ${currentPlayer?.name ?? "next player"} is now playing`
-                  : `Watching ${currentPlayer?.name ?? "…"} play`}
+                {validating
+                  ? "Validating…"
+                  : isLockedOut
+                    ? `Locked out — ${currentPlayer?.name ?? "next player"} is now playing`
+                    : `Watching ${currentPlayer?.name ?? "…"} play`}
               </div>
             )}
           </>
