@@ -1,29 +1,45 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getPlayerCareer, searchTransfermarkt, normalise } from "@/lib/player"
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: CORS_HEADERS })
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { playerName, tileIds, board } = await req.json()
 
     if (!playerName || !tileIds || !board) {
-      return NextResponse.json({ valid: false, message: "Missing required fields." }, { status: 400 })
+      return NextResponse.json(
+        { valid: false, message: "Missing required fields." },
+        { status: 400, headers: CORS_HEADERS }
+      )
     }
 
-    // Search Transfermarkt for the player
     const results = await searchTransfermarkt(normalise(playerName))
 
     if (!results.length) {
-      return NextResponse.json({ valid: false, message: `"${playerName}" not found.` })
+      return NextResponse.json(
+        { valid: false, message: `"${playerName}" not found.` },
+        { headers: CORS_HEADERS }
+      )
     }
 
-    // Get full career for the top result
     const player = await getPlayerCareer(results[0].id)
 
     if (!player) {
-      return NextResponse.json({ valid: false, message: `Could not load career data for "${playerName}".` })
+      return NextResponse.json(
+        { valid: false, message: `Could not load career data for "${playerName}".` },
+        { headers: CORS_HEADERS }
+      )
     }
 
-    // Check each selected tile against the player's career
     const tiles = board.tiles
     const failedTiles: string[] = []
 
@@ -45,23 +61,32 @@ export async function POST(req: NextRequest) {
     }
 
     if (failedTiles.length > 0) {
-      return NextResponse.json({
-        valid: false,
-        message: `${player.name} has no connection to: ${failedTiles.join(", ")}.`,
-        playerName: player.name,
-      })
+      return NextResponse.json(
+        {
+          valid: false,
+          message: `${player.name} has no connection to: ${failedTiles.join(", ")}.`,
+          playerName: player.name,
+        },
+        { headers: CORS_HEADERS }
+      )
     }
 
-    return NextResponse.json({
-      valid: true,
-      message: `${player.name} is valid!`,
-      playerName: player.name,
-      clubIds: player.clubIds,
-      tags: player.tags,
-    })
+    return NextResponse.json(
+      {
+        valid: true,
+        message: `${player.name} is valid!`,
+        playerName: player.name,
+        clubIds: player.clubIds,
+        tags: player.tags,
+      },
+      { headers: CORS_HEADERS }
+    )
 
   } catch (err) {
     console.error("Validate error:", err)
-    return NextResponse.json({ valid: false, message: "Server error — please try again." }, { status: 500 })
+    return NextResponse.json(
+      { valid: false, message: "Server error — please try again." },
+      { status: 500, headers: CORS_HEADERS }
+    )
   }
 }
