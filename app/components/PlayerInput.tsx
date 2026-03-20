@@ -2,15 +2,24 @@
 import { useState, useRef, useEffect } from "react"
 import styles from "./PlayerInput.module.css"
 
+interface PlayerResult {
+  name: string
+  nationality: string | null
+  flagEmoji: string | null
+  position: string | null
+}
+
 interface Props {
   onClaim: (playerName: string) => void
   onPass: () => void
   selectedCount: number
 }
 
+const MIN_TILES = 2
+
 export function PlayerInput({ onClaim, onPass, selectedCount }: Props) {
   const [query, setQuery] = useState("")
-  const [suggestions, setSuggestions] = useState<string[]>([])
+  const [suggestions, setSuggestions] = useState<PlayerResult[]>([])
   const [loading, setLoading] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -31,25 +40,29 @@ export function PlayerInput({ onClaim, onPass, selectedCount }: Props) {
     }, 350)
   }, [query])
 
-  function handleSelect(name: string) {
-    setQuery(name)
+  function handleSelect(result: PlayerResult) {
+    setQuery(result.name)
     setSuggestions([])
     inputRef.current?.focus()
   }
 
   function handleSubmit() {
-    if (!query.trim() || selectedCount === 0) return
+    if (!query.trim() || selectedCount < MIN_TILES) return
     onClaim(query.trim())
     setQuery("")
     setSuggestions([])
   }
 
+  const notEnoughTiles = selectedCount > 0 && selectedCount < MIN_TILES
+
   return (
     <div className={styles.wrap}>
       <p className={styles.hint}>
         {selectedCount === 0
-          ? "Tap tiles above to select them, then enter a player"
-          : `${selectedCount} tile${selectedCount > 1 ? "s" : ""} selected — enter a player`}
+          ? `Tap tiles to select them (min ${MIN_TILES}), then enter a player`
+          : notEnoughTiles
+            ? `Select at least ${MIN_TILES} tiles — ${selectedCount} selected so far`
+            : `${selectedCount} tile${selectedCount > 1 ? "s" : ""} selected — enter a player`}
       </p>
 
       <div className={styles.autocompleteWrap}>
@@ -68,14 +81,22 @@ export function PlayerInput({ onClaim, onPass, selectedCount }: Props) {
         {loading && <span className={styles.spinner}>…</span>}
         {suggestions.length > 0 && (
           <ul className={styles.dropdown}>
-            {suggestions.map(name => (
+            {suggestions.map(result => (
               <li
-                key={name}
+                key={result.name}
                 className={styles.suggestion}
-                onMouseDown={e => { e.preventDefault(); handleSelect(name) }}
-                onTouchEnd={e => { e.preventDefault(); handleSelect(name) }}
+                onMouseDown={e => { e.preventDefault(); handleSelect(result) }}
+                onTouchEnd={e => { e.preventDefault(); handleSelect(result) }}
               >
-                {name}
+                <span className={styles.suggestionName}>{result.name}</span>
+                <span className={styles.suggestionMeta}>
+                  {result.flagEmoji && (
+                    <span className={styles.flag}>{result.flagEmoji}</span>
+                  )}
+                  {result.position && (
+                    <span className={styles.position}>{result.position}</span>
+                  )}
+                </span>
               </li>
             ))}
           </ul>
@@ -86,7 +107,7 @@ export function PlayerInput({ onClaim, onPass, selectedCount }: Props) {
         <button
           className={styles.claimBtn}
           onClick={handleSubmit}
-          disabled={!query.trim() || selectedCount === 0}
+          disabled={!query.trim() || selectedCount < MIN_TILES}
         >
           Claim tiles
         </button>

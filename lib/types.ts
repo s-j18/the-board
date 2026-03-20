@@ -72,6 +72,7 @@ export type ClientMessage =
   | { type: "claim_invalid"; message: string }
   | { type: "pass" }
   | { type: "kick"; playerId: string }
+  | { type: "restart" }
 
 // ── WebSocket messages (server → client) ─────────────────────────────────────
 export type ServerMessage =

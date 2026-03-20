@@ -51,7 +51,12 @@ export default function RoomPage() {
     socket.addEventListener("message", (evt) => {
       const msg: ServerMessage = JSON.parse(evt.data)
       if (msg.type === "state") {
-        setGameState(msg.state)
+        setGameState(prev => {
+          if (prev?.phase === "finished" && msg.state.phase === "lobby") {
+            setSelectedTiles([])
+          }
+          return msg.state
+        })
         if (msg.state.phase === "playing") {
           setMessage({ text: "Select tiles then enter a player.", kind: "info" })
         }
@@ -144,6 +149,11 @@ export default function RoomPage() {
     send({ type: "kick", playerId })
   }
 
+  function handleRestart() {
+    send({ type: "restart" })
+    setSelectedTiles([])
+  }
+
   if (!gameState) {
     return (
       <div className={styles.loading}>
@@ -232,7 +242,13 @@ export default function RoomPage() {
         )}
 
         {gameState.phase === "finished" && (
-          <GameOver players={gameState.players} board={gameState.board} owners={gameState.owners} />
+          <GameOver
+            players={gameState.players}
+            board={gameState.board}
+            owners={gameState.owners}
+            isHost={isHost}
+            onRestart={handleRestart}
+          />
         )}
       </main>
     </div>

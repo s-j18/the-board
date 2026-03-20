@@ -110,7 +110,7 @@ export function applyClaim(
 
   const newPlayers = state.players.map(p => {
     if (p.playerIndex === playerIndex) {
-      return { ...p, score: p.score + result.blankClaimed.length, lockedOut: false }
+      return { ...p, score: p.score + result.blankClaimed.length + result.opponentStolen.length, lockedOut: false }
     }
     const stolen = result.opponentStolen.filter(id => state.owners[id] === p.playerIndex).length
     return stolen > 0 ? { ...p, score: p.score - stolen } : p

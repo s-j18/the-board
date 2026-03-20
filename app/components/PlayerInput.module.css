@@ -21,7 +21,6 @@
   border-radius: var(--radius-sm);
   color: var(--text);
   font-size: 1rem;
-  /* Larger padding on mobile for easier tapping */
   padding: 0.8rem 1rem;
   outline: none;
   transition: border-color 0.15s;
@@ -53,14 +52,16 @@
   z-index: 50;
   overflow: hidden;
   box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-  /* Prevent dropdown from going off screen on mobile */
   max-height: 240px;
   overflow-y: auto;
 }
 
 .suggestion {
-  /* Large touch targets */
-  padding: 0.8rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.7rem 1rem;
   font-size: 0.95rem;
   cursor: pointer;
   border-bottom: 1px solid var(--border);
@@ -68,6 +69,37 @@
 
 .suggestion:last-child { border-bottom: none; }
 .suggestion:hover, .suggestion:active { background: var(--surface2); }
+
+.suggestionName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.suggestionMeta {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.flag {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.position {
+  font-size: 0.68rem;
+  color: var(--muted);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 1px 5px;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
 
 .actions {
   display: flex;
@@ -82,7 +114,6 @@
   color: #fff;
   font-size: 1rem;
   font-weight: 600;
-  /* Large touch target */
   padding: 0.8rem;
   transition: opacity 0.15s;
 }

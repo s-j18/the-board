@@ -46,6 +46,7 @@ export default class BoardServer implements Party.Server {
       case "claim_invalid": this.handleClaimInvalid(conn, msg.message); break
       case "pass":          this.handlePass(conn); break
       case "kick":          this.handleKick(conn, msg.playerId); break
+      case "restart":       this.handleRestart(conn); break
     }
   }
 
@@ -209,6 +210,27 @@ export default class BoardServer implements Party.Server {
 
     if (isGameOver(this.state)) {
       this.state = { ...this.state, phase: "finished" }
+    }
+
+    this.broadcast({ type: "state", state: this.state })
+  }
+
+  handleRestart(conn: Party.Connection) {
+    if (!this.state) return
+    if (this.state.players[0]?.id !== conn.id) {
+      this.send(conn, { type: "error", message: "Only the host can restart the game." })
+      return
+    }
+
+    // Reset to lobby, keeping same players with scores cleared
+    this.state = {
+      ...this.state,
+      phase: "lobby",
+      board: generateBoard(5, 5, DEFAULT_FILTERS),
+      owners: Array(25).fill(0) as TileOwner[],
+      consecutivePasses: 0,
+      currentTurn: this.state.players[0]?.id ?? "",
+      players: this.state.players.map(p => ({ ...p, score: 0, lockedOut: false })),
     }
 
     this.broadcast({ type: "state", state: this.state })

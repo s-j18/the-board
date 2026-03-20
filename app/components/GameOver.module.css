@@ -4,13 +4,19 @@
   align-items: center;
   gap: 1.5rem;
   padding: 2rem 1rem;
-  max-width: 400px;
+  max-width: 420px;
   margin: 0 auto;
 }
 
 .heading {
   font-size: 1.75rem;
   font-weight: 700;
+  text-align: center;
+}
+
+.boardStats {
+  font-size: 0.85rem;
+  color: var(--muted);
 }
 
 .scores {
@@ -28,13 +34,14 @@
   padding: 0.875rem 1.25rem;
   border-bottom: 1px solid var(--border);
 }
-
 .row:last-child { border-bottom: none; }
+.row.winner { background: rgba(255,255,255,0.04); }
 
 .rank {
   font-size: 0.85rem;
   color: var(--muted);
   width: 24px;
+  flex-shrink: 0;
 }
 
 .dot {
@@ -49,20 +56,40 @@
   font-size: 0.95rem;
 }
 
+.tileCount {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
 .score {
   font-weight: 700;
   font-size: 1rem;
 }
 
-.homeBtn {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text);
-  font-size: 0.9rem;
-  padding: 0.65rem 1.5rem;
-  text-decoration: none;
-  transition: border-color 0.15s;
+.actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
 }
 
-.homeBtn:hover { border-color: var(--p1); }
+.restartBtn {
+  width: 100%;
+  background: var(--p1);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 0.875rem;
+  transition: opacity 0.15s;
+}
+.restartBtn:hover { opacity: 0.85; }
+.restartBtn:active { opacity: 0.7; }
+
+.waitRestart {
+  font-size: 0.85rem;
+  color: var(--muted);
+  text-align: center;
+}

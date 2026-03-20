@@ -22,6 +22,13 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    if (!Array.isArray(tileIds) || tileIds.length < 2) {
+      return NextResponse.json(
+        { valid: false, message: "You must select at least 2 tiles." },
+        { headers: CORS_HEADERS }
+      )
+    }
+
     // Single search call — returns id AND nationalities
     const results = await searchTransfermarkt(playerName)
 
