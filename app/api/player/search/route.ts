@@ -55,13 +55,13 @@ export async function GET(req: NextRequest) {
     const results: PlayerSearchResult[] = (data.results ?? [])
       .slice(0, 8)
       .map((r: { id: string; name: string; nationalities?: string[]; position?: string }) => {
-        // TM API returns 'nationalities' as an array — take the first one
-        const nationality = r.nationalities?.[0] ?? null
+        const nationalities: string[] = Array.isArray(r.nationalities) ? r.nationalities : []
+        const primaryNationality = nationalities[0] ?? null
         return {
           id: r.id,
           name: r.name,
-          nationality,
-          flagEmoji: nationality ? (FLAG_MAP[nationality] ?? null) : null,
+          nationalities,
+          flagEmoji: primaryNationality ? (FLAG_MAP[primaryNationality] ?? null) : null,
           position: r.position ?? null,
         }
       })

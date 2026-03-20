@@ -77,7 +77,7 @@ export function PlayerInput({ onClaim, onPass, selectedCount }: Props) {
 
   function handleSelect(result: PlayerResult) {
     setQuery(result.name)
-    setSelectedPlayer({ id: result.id, name: result.name, nationalities: result.nationalities })
+    setSelectedPlayer({ id: result.id, name: result.name, nationalities: result.nationalities ?? [] })
     setSuggestions([])
     inputRef.current?.focus()
   }
@@ -122,7 +122,7 @@ export function PlayerInput({ onClaim, onPass, selectedCount }: Props) {
         {suggestions.length > 0 && (
           <ul className={styles.dropdown}>
             {suggestions.map(result => {
-              const flagCode = result.nationalities[0]
+              const flagCode = result.nationalities?.[0]
                 ? NATIONALITY_TO_CODE[result.nationalities[0]] ?? null
                 : null
               return (
